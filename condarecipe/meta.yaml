@@ -5,3 +5,7 @@ package:
 
 build:
   number: 0
+
+test:
+  requires:
+    - numba
