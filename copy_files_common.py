@@ -10,11 +10,12 @@ cuda_libraries = [
     'cufft',
     'curand',
     'cusparse',
+    'cusolver',
     'nppc',
     'nppi',
     'npps',
     'nvrtc-builtins',
-    'nvrtc'
+    'nvrtc',
 ]
 
 libdevice_versions = ['20.10', '30.10', '35.10', '50.10']
