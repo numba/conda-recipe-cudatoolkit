@@ -1,0 +1,21 @@
+package:
+   name: cudatoolkit
+   version: 8.0
+
+build:
+  number: 1
+
+requirements:
+  build:
+    - python >=3
+    - requests
+    - 7za # [win]
+    - conda
+    - pyyaml
+
+source:
+    path: ../scripts/
+
+test:
+  requires:
+    - numba
