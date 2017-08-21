@@ -98,17 +98,18 @@ cu_8['installers_url_ext'] = 'local_installers/'
 cu_8['patch_url_ext'] = 'patches/2/'
 cu_8['md5_url'] = "https://developer.nvidia.com/compute/cuda/8.0/Prod2/docs/sidebar/md5sum-txt"
 cu_8['cuda_libraries'] = [
-    'cublas',
     'cudart',
     'cufft',
-    'curand',
+    'cublas',
     'cusparse',
     'cusolver',
+    'curand',
     'nppc',
     'nppi',
     'npps',
-    'nvrtc-builtins',
     'nvrtc',
+    'nvrtc-builtins',
+    'nvtoolsext',
 ]
 cu_8['libdevice_versions'] = ['20.10', '30.10', '35.10', '50.10']
 
