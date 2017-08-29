@@ -4,6 +4,8 @@ package:
 
 build:
   number: 3
+  script_env:
+    - NVTOOLSEXT_INSTALL_PATH
 
 requirements:
   build:
