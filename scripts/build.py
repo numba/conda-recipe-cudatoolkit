@@ -41,6 +41,13 @@ for v in versions:
 # cuda_lib_fmt string format for the cuda libraries
 # nvvm_lib_fmt string format for the nvvm libraries
 # libdevice_lib_fmt string format for the libdevice.compute bitcode file
+#
+# To accommodate nvtoolsext not being present as a DLL in the installer PE32s on windows,
+# the windows variant of this script supports assembly directly from a pre-installed 
+# CUDA toolkit. The environment variable "NVTOOLSEXT_INSTALL_PATH" can be set to the
+# installation path of the CUDA toolkit's NvToolsExt location (this is not the user
+# defined install directory) and the DLL will be taken from that location.
+
 
 
 ######################
@@ -109,13 +116,14 @@ cu_8['cuda_libraries'] = [
     'npps',
     'nvrtc',
     'nvrtc-builtins',
-    'nvtoolsext',
+    'nvToolsExt',
 ]
 cu_8['libdevice_versions'] = ['20.10', '30.10', '35.10', '50.10']
 
 cu_8['linux'] = {'blob': 'cuda_8.0.61_375.26_linux-run',
                  'patches': ['cuda_8.0.61.2_linux-run'],
                  'cuda_lib_fmt': 'lib{0}.so.8.0',
+                 'nvtoolsext_fmt': 'lib{0}.so.1.0.0',
                  'nvvm_lib_fmt': 'lib{0}.so.3.1.0',
                  'libdevice_lib_fmt': 'libdevice.compute_{0}.bc'
                  }
@@ -123,13 +131,18 @@ cu_8['linux'] = {'blob': 'cuda_8.0.61_375.26_linux-run',
 cu_8['windows'] = {'blob': 'cuda_8.0.61_windows-exe',
                    'patches': ['cuda_8.0.61.2_windows-exe'],
                    'cuda_lib_fmt': '{0}64_80.dll',
+                   'nvtoolsext_fmt': '{0}64_1.dll',
                    'nvvm_lib_fmt': '{0}64_31_0.dll',
-                   'libdevice_lib_fmt': 'libdevice.compute_{0}.bc'
+                   'libdevice_lib_fmt': 'libdevice.compute_{0}.bc',
+                   'NvToolsExtPath' :
+                       os.path.join('c:' + os.sep, 'Program Files',
+                                    'NVIDIA Corporation', 'NVToolsExt', 'bin')
                    }
 
 cu_8['osx'] = {'blob': 'cuda_8.0.61_mac-dmg',
                'patches': ['cuda_8.0.61.2_mac-dmg'],
                'cuda_lib_fmt': 'lib{0}.8.0.dylib',
+               'nvtoolsext_fmt': 'lib{0}.1.dylib',
                'nvvm_lib_fmt': 'lib{0}.3.1.0.dylib',
                'libdevice_lib_fmt': 'libdevice.compute_{0}.bc'
                }
@@ -164,9 +177,11 @@ class Extractor(object):
         self.libdevice_versions = ver_config['libdevice_versions']
         self.cu_blob = plt_config['blob']
         self.cuda_lib_fmt = plt_config['cuda_lib_fmt']
+        self.nvtoolsext_fmt = plt_config.get('nvtoolsext_fmt')
         self.nvvm_lib_fmt = plt_config['nvvm_lib_fmt']
         self.libdevice_lib_fmt = plt_config['libdevice_lib_fmt']
         self.patches = plt_config['patches']
+        self.nvtoolsextpath = plt_config.get('NvToolsExtPath')
         self.config = {'version': version, **ver_config}
         self.prefix = os.environ['PREFIX']
         self.src_dir = os.environ['SRC_DIR']
@@ -229,6 +244,16 @@ class Extractor(object):
         for libname in libraries:
             filename = template.format(libname)
             paths = fnmatch.filter(os.listdir(dirpath), filename)
+            if not paths:
+                msg = ("Cannot find item: %s, looked for %s" %
+                       (libname, filename))
+                raise RuntimeError(msg)
+            if len(paths) != 1:
+                msg = ("Aliasing present for item: %s, looked for %s" %
+                       (libname, filename))
+                msg += ". Found: \n"
+                msg += ', \n'.join([str(x) for x in paths])
+                raise RuntimeError(msg)
             for path in paths:
                 tmppath = os.path.join(dirpath, path)
                 assert os.path.isfile(tmppath), 'missing {0}'.format(tmppath)
@@ -239,8 +264,14 @@ class Extractor(object):
         """Copies the various cuda libraries and bc files to the output_dir
         """
         filepaths = []
-        filepaths += self.get_paths(self.cuda_libraries,
+        # nvToolsExt is different to the rest of the cuda libraries,
+        # it follows a different naming convention, this accommodates...
+        cudalibs = [x for x in self.cuda_libraries if x != 'nvToolsExt']
+        filepaths += self.get_paths(cudalibs,
                                     cuda_lib_dir, self.cuda_lib_fmt)
+        if 'nvToolsExt' in self.cuda_libraries:
+            filepaths += self.get_paths(['nvToolsExt'],
+                                        cuda_lib_dir, self.nvtoolsext_fmt)           
         filepaths += self.get_paths(['nvvm'], nvvm_lib_dir, self.nvvm_lib_fmt)
         filepaths += self.get_paths(self.libdevice_versions, libdevice_lib_dir,
                                     self.libdevice_lib_fmt)
@@ -262,7 +293,7 @@ class WindowsExtractor(Extractor):
     """
 
     def copy(self, *args):
-        basepath, store = args
+        store, = args
         self.copy_files(
             cuda_lib_dir=store,
             nvvm_lib_dir=store,
@@ -273,16 +304,29 @@ class WindowsExtractor(Extractor):
         patches = self.patches
         try:
             with tempdir() as tmpd:
+                extract_name = '__extracted'
+                extractdir = os.path.join(tmpd, extract_name)
+                os.mkdir(extract_name)
+
                 check_call(['7za', 'x', '-o%s' %
-                            tmpd, os.path.join(self.src_dir, runfile)])
+                            extractdir, os.path.join(self.src_dir, runfile)])
                 for p in patches:
                     check_call(['7za', 'x', '-aoa', '-o%s' %
-                                tmpd, os.path.join(self.src_dir, p)])
+                                extractdir, os.path.join(self.src_dir, p)])
+                    
+                nvt_path = os.environ.get('NVTOOLSEXT_INSTALL_PATH', self.nvtoolsextpath)
+                print("NvToolsExt path: %s" % nvt_path)
+                if nvt_path is not None:
+                    if not Path(nvt_path).is_dir():
+                        msg = ("NVTOOLSEXT_INSTALL_PATH is invalid "
+                                "or inaccessible.")
+                        raise ValueError(msg)
+                    
                 # fetch all the dlls into DLLs
                 store_name = 'DLLs'
                 store = os.path.join(tmpd, store_name)
                 os.mkdir(store)
-                for path, dirs, files in os.walk(tmpd):
+                for path, dirs, files in os.walk(extractdir):
                     if 'jre' not in path:  # don't get jre dlls
                         for filename in fnmatch.filter(files, "*.dll"):
                             if not Path(os.path.join(
@@ -296,7 +340,15 @@ class WindowsExtractor(Extractor):
                                 shutil.copy(
                                     os.path.join(path, filename),
                                     store)
-                self.copy(tmpd, store)
+                if nvt_path is not None:
+                    for path, dirs, files in os.walk(nvt_path):
+                        for filename in fnmatch.filter(files, "*.dll"):
+                            if not Path(os.path.join(
+                                    store, filename)).is_file():
+                                shutil.copy(
+                                    os.path.join(path, filename),
+                                    store)
+                self.copy(store)
         except PermissionError:
             # TODO: fix this
             # cuda 8 has files that refuse to delete, figure out perm changes
