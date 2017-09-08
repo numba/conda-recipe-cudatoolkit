@@ -122,9 +122,10 @@ cu_8['libdevice_versions'] = ['20.10', '30.10', '35.10', '50.10']
 
 cu_8['linux'] = {'blob': 'cuda_8.0.61_375.26_linux-run',
                  'patches': ['cuda_8.0.61.2_linux-run'],
-                 'cuda_lib_fmt': 'lib{0}.so.8.0',
-                 'nvtoolsext_fmt': 'lib{0}.so.1.0.0',
-                 'nvvm_lib_fmt': 'lib{0}.so.3.1.0',
+                 # need globs to handle symlinks
+                 'cuda_lib_fmt': 'lib{0}.so*',
+                 'nvtoolsext_fmt': 'lib{0}.so*',
+                 'nvvm_lib_fmt': 'lib{0}.so*',
                  'libdevice_lib_fmt': 'libdevice.compute_{0}.bc'
                  }
 
@@ -186,6 +187,7 @@ class Extractor(object):
         self.prefix = os.environ['PREFIX']
         self.src_dir = os.environ['SRC_DIR']
         self.output_dir = os.path.join(self.prefix, self.libdir[getplatform()])
+        self.symlinks = getplatform() == 'linux'
         try:
             os.mkdir(self.output_dir)
         except FileExistsError:
@@ -248,16 +250,29 @@ class Extractor(object):
                 msg = ("Cannot find item: %s, looked for %s" %
                        (libname, filename))
                 raise RuntimeError(msg)
-            if len(paths) != 1:
+            if (not self.symlinks) and (len(paths) != 1):
                 msg = ("Aliasing present for item: %s, looked for %s" %
                        (libname, filename))
                 msg += ". Found: \n"
                 msg += ', \n'.join([str(x) for x in paths])
                 raise RuntimeError(msg)
+            pathsforlib = []
             for path in paths:
                 tmppath = os.path.join(dirpath, path)
                 assert os.path.isfile(tmppath), 'missing {0}'.format(tmppath)
-                pathlist.append(tmppath)
+                pathsforlib.append(tmppath)
+            if self.symlinks: # deal with symlinked items
+                # get all DSOs
+                concrete_dsos = [x for x in pathsforlib 
+                                 if not os.path.islink(x)]
+                # find the most recent library version by name
+                target_library = max(concrete_dsos)
+                # remove this from the list of concrete_dsos
+                # all that remains are DSOs that are not wanted
+                concrete_dsos.remove(target_library)
+                # drop the unwanted DSOs from the paths
+                [pathsforlib.remove(x) for x in concrete_dsos]
+            pathlist.extend(pathsforlib)
         return pathlist
 
     def copy_files(self, cuda_lib_dir, nvvm_lib_dir, libdevice_lib_dir):
@@ -267,18 +282,25 @@ class Extractor(object):
         # nvToolsExt is different to the rest of the cuda libraries,
         # it follows a different naming convention, this accommodates...
         cudalibs = [x for x in self.cuda_libraries if x != 'nvToolsExt']
-        filepaths += self.get_paths(cudalibs,
-                                    cuda_lib_dir, self.cuda_lib_fmt)
+        filepaths += self.get_paths(cudalibs, cuda_lib_dir, self.cuda_lib_fmt)
         if 'nvToolsExt' in self.cuda_libraries:
-            filepaths += self.get_paths(['nvToolsExt'],
-                                        cuda_lib_dir, self.nvtoolsext_fmt)           
+            filepaths += self.get_paths(['nvToolsExt'], cuda_lib_dir,
+                                        self.nvtoolsext_fmt)
         filepaths += self.get_paths(['nvvm'], nvvm_lib_dir, self.nvvm_lib_fmt)
         filepaths += self.get_paths(self.libdevice_versions, libdevice_lib_dir,
                                     self.libdevice_lib_fmt)
 
         for fn in filepaths:
-            print('copying %s to %s' % (fn, self.output_dir))
-            shutil.copy(fn, self.output_dir)
+            if os.path.islink(fn):
+                # replicate symlinks
+                symlinktarget = os.readlink(fn)
+                targetname = os.path.basename(fn)
+                symlink = os.path.join(self.output_dir, targetname)
+                print('linking %s to %s' % (symlinktarget, symlink))
+                os.symlink(symlinktarget, symlink)
+            else:
+                print('copying %s to %s' % (fn, self.output_dir))
+                shutil.copy(fn, self.output_dir)
 
     def dump_config(self):
         """Dumps the config dictionary into the output directory
