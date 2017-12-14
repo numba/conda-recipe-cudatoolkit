@@ -15,7 +15,7 @@ from tempfile import TemporaryDirectory as tempdir
 from conda.exports import download, hashsum_file
 
 config = {}
-versions = ['7.5', '8.0', '9.0']
+versions = ['7.5', '8.0', '9.0', '9.1']
 for v in versions:
     config[v] = {'linux': {}, 'windows': {}, 'osx': {}}
 
@@ -205,6 +205,68 @@ cu_9['windows'] = {'blob': 'cuda_9.0.176_windows-exe',
 cu_9['osx'] = {'blob': 'cuda_9.0.176_mac-dmg',
                'patches': [],
                'cuda_lib_fmt': 'lib{0}.9.0.dylib',
+               'nvtoolsext_fmt': 'lib{0}.1.dylib',
+               'nvvm_lib_fmt': 'lib{0}.3.2.0.dylib',
+               'libdevice_lib_fmt': 'libdevice.{0}.bc'
+               }
+
+######################
+### CUDA 9.1 setup ###
+######################
+
+cu_91 = config['9.1']
+cu_91['base_url'] = "https://developer.nvidia.com/compute/cuda/9.1/Prod/"
+cu_91['installers_url_ext'] = 'local_installers/'
+cu_91['patch_url_ext'] = ''
+cu_91['md5_url'] = "http://developer.download.nvidia.com/compute/cuda/9.1/Prod/docs/sidebar/md5sum.txt"
+cu_91['cuda_libraries'] = [
+    'cudart',
+    'cufft',
+    'cublas',
+    'cusparse',
+    'cusolver',
+    'curand',
+    'nppc',
+    'nppial',
+    'nppicc',
+    'nppicom',
+    'nppidei',
+    'nppif',
+    'nppig',
+    'nppim',
+    'nppist',
+    'nppisu',
+    'nppitc',
+    'npps',
+    'nvrtc',
+    'nvrtc-builtins',
+    'nvToolsExt',
+]
+cu_91['libdevice_versions'] = ['10']
+
+cu_91['linux'] = {'blob': 'cuda_9.1.85_387.26_linux',
+                 'patches': [],
+                 # need globs to handle symlinks
+                 'cuda_lib_fmt': 'lib{0}.so*',
+                 'nvtoolsext_fmt': 'lib{0}.so*',
+                 'nvvm_lib_fmt': 'lib{0}.so*',
+                 'libdevice_lib_fmt': 'libdevice.{0}.bc'
+                 }
+
+cu_91['windows'] = {'blob': 'cuda_9.1.85_windows',
+                   'patches': [],
+                   'cuda_lib_fmt': '{0}64_91.dll',
+                   'nvtoolsext_fmt': '{0}64_1.dll',
+                   'nvvm_lib_fmt': '{0}64_32_0.dll',
+                   'libdevice_lib_fmt': 'libdevice.{0}.bc',
+                   'NvToolsExtPath' :
+                       os.path.join('c:' + os.sep, 'Program Files',
+                                    'NVIDIA Corporation', 'NVToolsExt', 'bin')
+                   }
+
+cu_91['osx'] = {'blob': 'cuda_9.1.85_mac',
+               'patches': [],
+               'cuda_lib_fmt': 'lib{0}.9.1.dylib',
                'nvtoolsext_fmt': 'lib{0}.1.dylib',
                'nvvm_lib_fmt': 'lib{0}.3.2.0.dylib',
                'libdevice_lib_fmt': 'libdevice.{0}.bc'
