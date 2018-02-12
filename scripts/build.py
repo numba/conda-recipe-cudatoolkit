@@ -529,8 +529,7 @@ class LinuxExtractor(Extractor):
         os.chmod(runfile, 0o777)
         with tempdir() as tmpd:
             cmd = [os.path.join(self.src_dir, runfile),
-                        '--toolkitpath', tmpd, '--toolkit', '--no-drm',
-                        '--silent']
+                        '--toolkitpath', tmpd, '--toolkit', '--silent']
             check_call(cmd)
             for p in patches:
                 os.chmod(p, 0o777)
