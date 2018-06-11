@@ -1,0 +1,23 @@
+package:
+   name: cudatoolkit
+   version: 9.1
+
+build:
+  number: 0
+  script_env:
+    - NVTOOLSEXT_INSTALL_PATH
+
+requirements:
+  build:
+    - python >=3
+    - requests
+    - 7za # [win]
+    - conda
+    - pyyaml
+
+source:
+    path: ../scripts/
+
+test:
+  requires:
+    - numba

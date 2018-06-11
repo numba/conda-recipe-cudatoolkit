@@ -15,7 +15,7 @@ from tempfile import TemporaryDirectory as tempdir
 from conda.exports import download, hashsum_file
 
 config = {}
-versions = ['7.5', '8.0', '9.0']
+versions = ['7.5', '8.0', '9.0', '9.1']
 for v in versions:
     config[v] = {'linux': {}, 'windows': {}, 'osx': {}}
 
@@ -148,9 +148,129 @@ cu_8['osx'] = {'blob': 'cuda_8.0.61_mac-dmg',
                'libdevice_lib_fmt': 'libdevice.compute_{0}.bc'
                }
 
+######################
+### CUDA 9.0 setup ###
+######################
 
-# CUDA 9.0 setup
-# TODO
+cu_9 = config['9.0']
+cu_9['base_url'] = "https://developer.nvidia.com/compute/cuda/9.0/Prod/"
+cu_9['installers_url_ext'] = 'local_installers/'
+cu_9['patch_url_ext'] = ''
+cu_9['md5_url'] = "http://developer.download.nvidia.com/compute/cuda/9.0/Prod/docs/sidebar/md5sum.txt"
+cu_9['cuda_libraries'] = [
+    'cudart',
+    'cufft',
+    'cublas',
+    'cusparse',
+    'cusolver',
+    'curand',
+    'nppc',
+    'nppial',
+    'nppicc',
+    'nppicom',
+    'nppidei',
+    'nppif',
+    'nppig',
+    'nppim',
+    'nppist',
+    'nppisu',
+    'nppitc',
+    'npps',
+    'nvrtc',
+    'nvrtc-builtins',
+    'nvToolsExt',
+]
+cu_9['libdevice_versions'] = ['10']
+
+cu_9['linux'] = {'blob': 'cuda_9.0.176_384.81_linux-run',
+                 'patches': [],
+                 # need globs to handle symlinks
+                 'cuda_lib_fmt': 'lib{0}.so*',
+                 'nvtoolsext_fmt': 'lib{0}.so*',
+                 'nvvm_lib_fmt': 'lib{0}.so*',
+                 'libdevice_lib_fmt': 'libdevice.{0}.bc'
+                 }
+
+cu_9['windows'] = {'blob': 'cuda_9.0.176_windows-exe',
+                   'patches': [],
+                   'cuda_lib_fmt': '{0}64_90.dll',
+                   'nvtoolsext_fmt': '{0}64_1.dll',
+                   'nvvm_lib_fmt': '{0}64_32_0.dll',
+                   'libdevice_lib_fmt': 'libdevice.{0}.bc',
+                   'NvToolsExtPath' :
+                       os.path.join('c:' + os.sep, 'Program Files',
+                                    'NVIDIA Corporation', 'NVToolsExt', 'bin')
+                   }
+
+cu_9['osx'] = {'blob': 'cuda_9.0.176_mac-dmg',
+               'patches': [],
+               'cuda_lib_fmt': 'lib{0}.9.0.dylib',
+               'nvtoolsext_fmt': 'lib{0}.1.dylib',
+               'nvvm_lib_fmt': 'lib{0}.3.2.0.dylib',
+               'libdevice_lib_fmt': 'libdevice.{0}.bc'
+               }
+
+######################
+### CUDA 9.1 setup ###
+######################
+
+cu_91 = config['9.1']
+cu_91['base_url'] = "https://developer.nvidia.com/compute/cuda/9.1/Prod/"
+cu_91['installers_url_ext'] = 'local_installers/'
+cu_91['patch_url_ext'] = ''
+cu_91['md5_url'] = "http://developer.download.nvidia.com/compute/cuda/9.1/Prod/docs/sidebar/md5sum.txt"
+cu_91['cuda_libraries'] = [
+    'cudart',
+    'cufft',
+    'cublas',
+    'cusparse',
+    'cusolver',
+    'curand',
+    'nppc',
+    'nppial',
+    'nppicc',
+    'nppicom',
+    'nppidei',
+    'nppif',
+    'nppig',
+    'nppim',
+    'nppist',
+    'nppisu',
+    'nppitc',
+    'npps',
+    'nvrtc',
+    'nvrtc-builtins',
+    'nvToolsExt',
+]
+cu_91['libdevice_versions'] = ['10']
+
+cu_91['linux'] = {'blob': 'cuda_9.1.85_387.26_linux',
+                 'patches': [],
+                 # need globs to handle symlinks
+                 'cuda_lib_fmt': 'lib{0}.so*',
+                 'nvtoolsext_fmt': 'lib{0}.so*',
+                 'nvvm_lib_fmt': 'lib{0}.so*',
+                 'libdevice_lib_fmt': 'libdevice.{0}.bc'
+                 }
+
+cu_91['windows'] = {'blob': 'cuda_9.1.85_windows',
+                   'patches': [],
+                   'cuda_lib_fmt': '{0}64_91.dll',
+                   'nvtoolsext_fmt': '{0}64_1.dll',
+                   'nvvm_lib_fmt': '{0}64_32_0.dll',
+                   'libdevice_lib_fmt': 'libdevice.{0}.bc',
+                   'NvToolsExtPath' :
+                       os.path.join('c:' + os.sep, 'Program Files',
+                                    'NVIDIA Corporation', 'NVToolsExt', 'bin')
+                   }
+
+cu_91['osx'] = {'blob': 'cuda_9.1.85_mac',
+               'patches': [],
+               'cuda_lib_fmt': 'lib{0}.9.1.dylib',
+               'nvtoolsext_fmt': 'lib{0}.1.dylib',
+               'nvvm_lib_fmt': 'lib{0}.3.2.0.dylib',
+               'libdevice_lib_fmt': 'libdevice.{0}.bc'
+               }
 
 
 class Extractor(object):
@@ -188,6 +308,8 @@ class Extractor(object):
         self.src_dir = os.environ['SRC_DIR']
         self.output_dir = os.path.join(self.prefix, self.libdir[getplatform()])
         self.symlinks = getplatform() == 'linux'
+        self.debug_install_path = os.environ.get('DEBUG_INSTALLER_PATH')
+        
         try:
             os.mkdir(self.output_dir)
         except FileExistsError:
@@ -199,14 +321,25 @@ class Extractor(object):
         dl_url = urlparse.urljoin(self.base_url, self.installers_url_ext)
         dl_url = urlparse.urljoin(dl_url, self.cu_blob)
         dl_path = os.path.join(self.src_dir, self.cu_blob)
-        print("downloading %s to %s" % (dl_url, dl_path))
-        download(dl_url, dl_path)
+        if not self.debug_install_path:
+            print("downloading %s to %s" % (dl_url, dl_path))
+            download(dl_url, dl_path)
+        else:
+            existing_file = os.path.join(self.debug_install_path, self.cu_blob)
+            print("DEBUG: copying %s to %s" % (existing_file, dl_path))
+            shutil.copy(existing_file, dl_path)
+            
         for p in self.patches:
             dl_url = urlparse.urljoin(self.base_url, self.patch_url_ext)
             dl_url = urlparse.urljoin(dl_url, p)
             dl_path = os.path.join(self.src_dir, p)
-            print("downloading %s to %s" % (dl_url, dl_path))
-            download(dl_url, dl_path)
+            if not self.debug_install_path:
+                print("downloading %s to %s" % (dl_url, dl_path))
+                download(dl_url, dl_path)
+            else:
+                existing_file = os.path.join(self.debug_install_path, p)
+                print("DEBUG: copying %s to %s" % (existing_file, dl_path))
+                shutil.copy(existing_file, dl_path)
 
     def check_md5(self):
         """Checks the md5sums of the downloaded binaries
@@ -395,12 +528,14 @@ class LinuxExtractor(Extractor):
         patches = self.patches
         os.chmod(runfile, 0o777)
         with tempdir() as tmpd:
-            check_call([os.path.join(self.src_dir, runfile),
-                        '--toolkitpath', tmpd, '--toolkit', '--silent'])
+            cmd = [os.path.join(self.src_dir, runfile),
+                        '--toolkitpath', tmpd, '--toolkit', '--silent']
+            check_call(cmd)
             for p in patches:
                 os.chmod(p, 0o777)
-                check_call([os.path.join(self.src_dir, p),
-                            '--installdir', tmpd, '--accept-eula', '--silent'])
+                cmd = [os.path.join(self.src_dir, p),
+                            '--installdir', tmpd, '--accept-eula', '--silent']
+                check_call(cmd)
             self.copy(tmpd)
 
 
