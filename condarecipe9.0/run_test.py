@@ -5,6 +5,11 @@ from numba.cuda.cudadrv.nvvm import NVVM
 
 
 def run_test():
+    # on windows only nvvm is available to numba
+    if sys.platform.startswith('win'):
+        nvvm = NVVM()
+        print("NVVM version", nvvm.get_version())
+        return nvvm.get_version() is not None
     if not test():
         return False
     nvvm = NVVM()
@@ -12,9 +17,6 @@ def run_test():
     # check pkg version matches lib pulled in
     gotlib = get_cudalib('cublas')
     lookfor = os.environ['PKG_VERSION']
-    if sys.platform.startswith('win'):
-        # windows libs have no dot
-        lookfor = lookfor.replace('.', '')
     return lookfor in gotlib
 
 

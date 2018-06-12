@@ -3,7 +3,7 @@ package:
    version: 9.0
 
 build:
-  number: 0
+  number: 1
   script_env:
     - NVTOOLSEXT_INSTALL_PATH
 
