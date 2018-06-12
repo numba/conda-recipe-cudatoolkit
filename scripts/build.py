@@ -280,7 +280,7 @@ class Extractor(object):
 
     libdir = {'linux': 'lib',
               'osx': 'lib',
-              'windows': 'DLLs'}
+              'windows': 'Library/bin'}
 
     def __init__(self, version, ver_config, plt_config):
         """Initialise an instance:
