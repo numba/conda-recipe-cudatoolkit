@@ -15,7 +15,7 @@ from tempfile import TemporaryDirectory as tempdir
 from conda.exports import download, hashsum_file
 
 config = {}
-versions = ['7.5', '8.0', '9.0', '9.1']
+versions = ['7.5', '8.0', '9.0', '9.1', '9.2']
 for v in versions:
     config[v] = {'linux': {}, 'windows': {}, 'osx': {}}
 
@@ -43,7 +43,7 @@ for v in versions:
 # libdevice_lib_fmt string format for the libdevice.compute bitcode file
 #
 # To accommodate nvtoolsext not being present as a DLL in the installer PE32s on windows,
-# the windows variant of this script supports assembly directly from a pre-installed 
+# the windows variant of this script supports assembly directly from a pre-installed
 # CUDA toolkit. The environment variable "NVTOOLSEXT_INSTALL_PATH" can be set to the
 # installation path of the CUDA toolkit's NvToolsExt location (this is not the user
 # defined install directory) and the DLL will be taken from that location.
@@ -272,6 +272,67 @@ cu_91['osx'] = {'blob': 'cuda_9.1.85_mac',
                'libdevice_lib_fmt': 'libdevice.{0}.bc'
                }
 
+######################
+### CUDA 9.2 setup ###
+######################
+
+cu_92 = config['9.2']
+cu_92['base_url'] = "https://developer.nvidia.com/compute/cuda/9.2/Prod2/"
+cu_92['installers_url_ext'] = 'local_installers/'
+cu_92['patch_url_ext'] = ''
+cu_92['md5_url'] = "http://developer.download.nvidia.com/compute/cuda/9.2/Prod2/docs/sidebar/md5sum.txt"
+cu_92['cuda_libraries'] = [
+    'cudart',
+    'cufft',
+    'cublas',
+    'cusparse',
+    'cusolver',
+    'curand',
+    'nppc',
+    'nppial',
+    'nppicc',
+    'nppicom',
+    'nppidei',
+    'nppif',
+    'nppig',
+    'nppim',
+    'nppist',
+    'nppisu',
+    'nppitc',
+    'npps',
+    'nvrtc',
+    'nvrtc-builtins',
+    'nvToolsExt',
+]
+cu_92['libdevice_versions'] = ['10']
+
+cu_92['linux'] = {'blob': 'cuda_9.2.148_396.37_linux',
+                 'patches': [],
+                 # need globs to handle symlinks
+                 'cuda_lib_fmt': 'lib{0}.so*',
+                 'nvtoolsext_fmt': 'lib{0}.so*',
+                 'nvvm_lib_fmt': 'lib{0}.so*',
+                 'libdevice_lib_fmt': 'libdevice.{0}.bc'
+                 }
+
+cu_92['windows'] = {'blob': 'cuda_9.2.148_windows',
+                   'patches': [],
+                   'cuda_lib_fmt': '{0}64_92.dll',
+                   'nvtoolsext_fmt': '{0}64_1.dll',
+                   'nvvm_lib_fmt': '{0}64_32_0.dll',
+                   'libdevice_lib_fmt': 'libdevice.{0}.bc',
+                   'NvToolsExtPath' :
+                       os.path.join('c:' + os.sep, 'Program Files',
+                                    'NVIDIA Corporation', 'NVToolsExt', 'bin')
+                   }
+
+cu_92['osx'] = {'blob': 'cuda_9.2.148_mac',
+               'patches': [],
+               'cuda_lib_fmt': 'lib{0}.9.2.dylib',
+               'nvtoolsext_fmt': 'lib{0}.1.dylib',
+               'nvvm_lib_fmt': 'lib{0}.3.2.0.dylib',
+               'libdevice_lib_fmt': 'libdevice.{0}.bc'
+               }
 
 class Extractor(object):
     """Extractor base class, platform specific extractors should inherit
@@ -309,7 +370,7 @@ class Extractor(object):
         self.output_dir = os.path.join(self.prefix, self.libdir[getplatform()])
         self.symlinks = getplatform() == 'linux'
         self.debug_install_path = os.environ.get('DEBUG_INSTALLER_PATH')
-        
+
         try:
             os.mkdir(self.output_dir)
         except FileExistsError:
@@ -328,7 +389,7 @@ class Extractor(object):
             existing_file = os.path.join(self.debug_install_path, self.cu_blob)
             print("DEBUG: copying %s to %s" % (existing_file, dl_path))
             shutil.copy(existing_file, dl_path)
-            
+
         for p in self.patches:
             dl_url = urlparse.urljoin(self.base_url, self.patch_url_ext)
             dl_url = urlparse.urljoin(dl_url, p)
@@ -396,7 +457,7 @@ class Extractor(object):
                 pathsforlib.append(tmppath)
             if self.symlinks: # deal with symlinked items
                 # get all DSOs
-                concrete_dsos = [x for x in pathsforlib 
+                concrete_dsos = [x for x in pathsforlib
                                  if not os.path.islink(x)]
                 # find the most recent library version by name
                 target_library = max(concrete_dsos)
@@ -468,7 +529,7 @@ class WindowsExtractor(Extractor):
                 for p in patches:
                     check_call(['7za', 'x', '-aoa', '-o%s' %
                                 extractdir, os.path.join(self.src_dir, p)])
-                    
+
                 nvt_path = os.environ.get('NVTOOLSEXT_INSTALL_PATH', self.nvtoolsextpath)
                 print("NvToolsExt path: %s" % nvt_path)
                 if nvt_path is not None:
@@ -476,7 +537,7 @@ class WindowsExtractor(Extractor):
                         msg = ("NVTOOLSEXT_INSTALL_PATH is invalid "
                                 "or inaccessible.")
                         raise ValueError(msg)
-                    
+
                 # fetch all the dlls into DLLs
                 store_name = 'DLLs'
                 store = os.path.join(tmpd, store_name)
