@@ -284,6 +284,7 @@ cu_92['md5_url'] = "http://developer.download.nvidia.com/compute/cuda/9.2/Prod2/
 cu_92['cuda_libraries'] = [
     'cudart',
     'cufft',
+    'cufftw',
     'cublas',
     'cusparse',
     'cusolver',
@@ -300,6 +301,8 @@ cu_92['cuda_libraries'] = [
     'nppisu',
     'nppitc',
     'npps',
+    'nvblas',
+    'nvgraph',
     'nvrtc',
     'nvrtc-builtins',
     'nvToolsExt',
