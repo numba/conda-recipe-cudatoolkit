@@ -15,7 +15,7 @@ from tempfile import TemporaryDirectory as tempdir
 from conda.exports import download, hashsum_file
 
 config = {}
-versions = ['7.5', '8.0', '9.0', '9.1']
+versions = ['7.5', '8.0', '9.0', '9.1', '10.0']
 for v in versions:
     config[v] = {'linux': {}, 'windows': {}, 'osx': {}}
 
@@ -273,6 +273,69 @@ cu_91['osx'] = {'blob': 'cuda_9.1.85_mac',
                }
 
 
+#######################
+### CUDA 10.0 setup ###
+#######################
+
+cu_10 = config['10.0']
+cu_10['base_url'] = "https://developer.nvidia.com/compute/cuda/10.0/Prod/"
+cu_10['installers_url_ext'] = 'local_installers/'
+cu_10['patch_url_ext'] = ''
+cu_10['md5_url'] = "https://developer.download.nvidia.com/compute/cuda/10.0/Prod/docs/sidebar/md5sum.txt"
+cu_10['cuda_libraries'] = [
+    'cudart',
+    'cufft',
+    'cublas',
+    'cusparse',
+    'cusolver',
+    'curand',
+    'nppc',
+    'nppial',
+    'nppicc',
+    'nppicom',
+    'nppidei',
+    'nppif',
+    'nppig',
+    'nppim',
+    'nppist',
+    'nppisu',
+    'nppitc',
+    'npps',
+    'nvrtc',
+    'nvrtc-builtins',
+    'nvToolsExt',
+]
+cu_10['libdevice_versions'] = ['10']
+
+cu_10['linux'] = {'blob': 'cuda_10.0.130_410.48_linux',
+                 'patches': [],
+                 # need globs to handle symlinks
+                 'cuda_lib_fmt': 'lib{0}.so*',
+                 'nvtoolsext_fmt': 'lib{0}.so*',
+                 'nvvm_lib_fmt': 'lib{0}.so*',
+                 'libdevice_lib_fmt': 'libdevice.{0}.bc'
+                 }
+
+cu_10['windows'] = {'blob': 'cuda_10.0.130_411.31_windows',
+                   'patches': [],
+                   'cuda_lib_fmt': '{0}64_100.dll',
+                   'nvtoolsext_fmt': '{0}64_1.dll',
+                   'nvvm_lib_fmt': '{0}64_33_0.dll',
+                   'libdevice_lib_fmt': 'libdevice.{0}.bc',
+                   'NvToolsExtPath' :
+                       os.path.join('c:' + os.sep, 'Program Files',
+                                    'NVIDIA Corporation', 'NVToolsExt', 'bin')
+                   }
+
+cu_10['osx'] = {'blob': 'cuda_10.0.130_mac',
+               'patches': [],
+               'cuda_lib_fmt': 'lib{0}.10.0.dylib',
+               'nvtoolsext_fmt': 'lib{0}.1.dylib',
+               'nvvm_lib_fmt': 'lib{0}.3.3.0.dylib',
+               'libdevice_lib_fmt': 'libdevice.{0}.bc'
+               }
+
+
 class Extractor(object):
     """Extractor base class, platform specific extractors should inherit
     from this class.
@@ -309,7 +372,7 @@ class Extractor(object):
         self.output_dir = os.path.join(self.prefix, self.libdir[getplatform()])
         self.symlinks = getplatform() == 'linux'
         self.debug_install_path = os.environ.get('DEBUG_INSTALLER_PATH')
-        
+
         try:
             os.mkdir(self.output_dir)
         except FileExistsError:
@@ -328,7 +391,7 @@ class Extractor(object):
             existing_file = os.path.join(self.debug_install_path, self.cu_blob)
             print("DEBUG: copying %s to %s" % (existing_file, dl_path))
             shutil.copy(existing_file, dl_path)
-            
+
         for p in self.patches:
             dl_url = urlparse.urljoin(self.base_url, self.patch_url_ext)
             dl_url = urlparse.urljoin(dl_url, p)
@@ -468,7 +531,7 @@ class WindowsExtractor(Extractor):
                 for p in patches:
                     check_call(['7za', 'x', '-aoa', '-o%s' %
                                 extractdir, os.path.join(self.src_dir, p)])
-                    
+
                 nvt_path = os.environ.get('NVTOOLSEXT_INSTALL_PATH', self.nvtoolsextpath)
                 print("NvToolsExt path: %s" % nvt_path)
                 if nvt_path is not None:
@@ -476,7 +539,7 @@ class WindowsExtractor(Extractor):
                         msg = ("NVTOOLSEXT_INSTALL_PATH is invalid "
                                 "or inaccessible.")
                         raise ValueError(msg)
-                    
+
                 # fetch all the dlls into DLLs
                 store_name = 'DLLs'
                 store = os.path.join(tmpd, store_name)
