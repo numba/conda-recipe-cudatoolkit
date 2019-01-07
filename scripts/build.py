@@ -318,7 +318,7 @@ cu_10['linux'] = {'blob': 'cuda_10.0.130_410.48_linux',
 
 cu_10['windows'] = {'blob': 'cuda_10.0.130_411.31_windows',
                    'patches': [],
-                   'cuda_lib_fmt': '{0}64_100.dll',
+                   'cuda_lib_fmt': '{0}64_100*.dll',
                    'nvtoolsext_fmt': '{0}64_1.dll',
                    'nvvm_lib_fmt': '{0}64_33_0.dll',
                    'libdevice_lib_fmt': 'libdevice.{0}.bc',
