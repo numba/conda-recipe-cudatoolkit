@@ -15,7 +15,8 @@ from tempfile import TemporaryDirectory as tempdir
 from conda.exports import download, hashsum_file
 
 config = {}
-versions = ['7.5', '8.0', '9.0', '9.1', '10.0']
+versions = ['7.5', '8.0', '9.0', '9.1', '9.2', '10.0']
+
 for v in versions:
     config[v] = {'linux': {}, 'windows': {}, 'osx': {}}
 
@@ -43,7 +44,7 @@ for v in versions:
 # libdevice_lib_fmt string format for the libdevice.compute bitcode file
 #
 # To accommodate nvtoolsext not being present as a DLL in the installer PE32s on windows,
-# the windows variant of this script supports assembly directly from a pre-installed 
+# the windows variant of this script supports assembly directly from a pre-installed
 # CUDA toolkit. The environment variable "NVTOOLSEXT_INSTALL_PATH" can be set to the
 # installation path of the CUDA toolkit's NvToolsExt location (this is not the user
 # defined install directory) and the DLL will be taken from that location.
@@ -272,19 +273,19 @@ cu_91['osx'] = {'blob': 'cuda_9.1.85_mac',
                'libdevice_lib_fmt': 'libdevice.{0}.bc'
                }
 
+######################
+### CUDA 9.2 setup ###
+######################
 
-#######################
-### CUDA 10.0 setup ###
-#######################
-
-cu_10 = config['10.0']
-cu_10['base_url'] = "https://developer.nvidia.com/compute/cuda/10.0/Prod/"
-cu_10['installers_url_ext'] = 'local_installers/'
-cu_10['patch_url_ext'] = ''
-cu_10['md5_url'] = "https://developer.download.nvidia.com/compute/cuda/10.0/Prod/docs/sidebar/md5sum.txt"
-cu_10['cuda_libraries'] = [
+cu_92 = config['9.2']
+cu_92['base_url'] = "https://developer.nvidia.com/compute/cuda/9.2/Prod2/"
+cu_92['installers_url_ext'] = 'local_installers/'
+cu_92['patch_url_ext'] = 'patches/1/'
+cu_92['md5_url'] = "http://developer.download.nvidia.com/compute/cuda/9.2/Prod2/docs/sidebar/md5sum.txt"
+cu_92['cuda_libraries'] = [
     'cudart',
     'cufft',
+    'cufftw',
     'cublas',
     'cusparse',
     'cusolver',
@@ -301,6 +302,73 @@ cu_10['cuda_libraries'] = [
     'nppisu',
     'nppitc',
     'npps',
+    'nvblas',
+    'nvgraph',
+    'nvrtc',
+    'nvrtc-builtins',
+    'nvToolsExt',
+]
+cu_92['libdevice_versions'] = ['10']
+
+cu_92['linux'] = {'blob': 'cuda_9.2.148_396.37_linux',
+                 'patches': ['cuda_9.2.148.1_linux'],
+                 # need globs to handle symlinks
+                 'cuda_lib_fmt': 'lib{0}.so*',
+                 'nvtoolsext_fmt': 'lib{0}.so*',
+                 'nvvm_lib_fmt': 'lib{0}.so*',
+                 'libdevice_lib_fmt': 'libdevice.{0}.bc'
+                 }
+
+cu_92['windows'] = {'blob': 'cuda_9.2.148_windows',
+                   'patches': ['cuda_9.2.148.1_windows'],
+                   'cuda_lib_fmt': '{0}64_92.dll',
+                   'nvtoolsext_fmt': '{0}64_1.dll',
+                   'nvvm_lib_fmt': '{0}64_32_0.dll',
+                   'libdevice_lib_fmt': 'libdevice.{0}.bc',
+                   'NvToolsExtPath' :
+                       os.path.join('c:' + os.sep, 'Program Files',
+                                    'NVIDIA Corporation', 'NVToolsExt', 'bin')
+                   }
+
+cu_92['osx'] = {'blob': 'cuda_9.2.148_mac',
+               'patches': ['cuda_9.2.148.1_mac'],
+               'cuda_lib_fmt': 'lib{0}.9.2.dylib',
+               'nvtoolsext_fmt': 'lib{0}.1.dylib',
+               'nvvm_lib_fmt': 'lib{0}.3.2.0.dylib',
+               'libdevice_lib_fmt': 'libdevice.{0}.bc'
+               }
+
+#######################
+### CUDA 10.0 setup ###
+#######################
+
+cu_10 = config['10.0']
+cu_10['base_url'] = "https://developer.nvidia.com/compute/cuda/10.0/Prod/"
+cu_10['installers_url_ext'] = 'local_installers/'
+cu_10['patch_url_ext'] = ''
+cu_10['md5_url'] = "https://developer.download.nvidia.com/compute/cuda/10.0/Prod/docs/sidebar/md5sum.txt"
+cu_10['cuda_libraries'] = [
+    'cudart',
+    'cufft',
+    'cufftw',
+    'cublas',
+    'cusparse',
+    'cusolver',
+    'curand',
+    'nppc',
+    'nppial',
+    'nppicc',
+    'nppicom',
+    'nppidei',
+    'nppif',
+    'nppig',
+    'nppim',
+    'nppist',
+    'nppisu',
+    'nppitc',
+    'npps',
+    'nvblas',
+    'nvgraph',
     'nvrtc',
     'nvrtc-builtins',
     'nvToolsExt',
@@ -343,7 +411,7 @@ class Extractor(object):
 
     libdir = {'linux': 'lib',
               'osx': 'lib',
-              'windows': 'DLLs'}
+              'windows': 'Library/bin'}
 
     def __init__(self, version, ver_config, plt_config):
         """Initialise an instance:
@@ -459,7 +527,7 @@ class Extractor(object):
                 pathsforlib.append(tmppath)
             if self.symlinks: # deal with symlinked items
                 # get all DSOs
-                concrete_dsos = [x for x in pathsforlib 
+                concrete_dsos = [x for x in pathsforlib
                                  if not os.path.islink(x)]
                 # find the most recent library version by name
                 target_library = max(concrete_dsos)
