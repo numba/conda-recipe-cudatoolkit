@@ -280,7 +280,7 @@ cu_91['osx'] = {'blob': 'cuda_9.1.85_mac',
 cu_92 = config['9.2']
 cu_92['base_url'] = "https://developer.nvidia.com/compute/cuda/9.2/Prod2/"
 cu_92['installers_url_ext'] = 'local_installers/'
-cu_92['patch_url_ext'] = ''
+cu_92['patch_url_ext'] = 'patches/1/'
 cu_92['md5_url'] = "http://developer.download.nvidia.com/compute/cuda/9.2/Prod2/docs/sidebar/md5sum.txt"
 cu_92['cuda_libraries'] = [
     'cudart',
@@ -311,7 +311,7 @@ cu_92['cuda_libraries'] = [
 cu_92['libdevice_versions'] = ['10']
 
 cu_92['linux'] = {'blob': 'cuda_9.2.148_396.37_linux',
-                 'patches': [],
+                 'patches': ['cuda_9.2.148.1_linux'],
                  # need globs to handle symlinks
                  'cuda_lib_fmt': 'lib{0}.so*',
                  'nvtoolsext_fmt': 'lib{0}.so*',
@@ -320,7 +320,7 @@ cu_92['linux'] = {'blob': 'cuda_9.2.148_396.37_linux',
                  }
 
 cu_92['windows'] = {'blob': 'cuda_9.2.148_windows',
-                   'patches': [],
+                   'patches': ['cuda_9.2.148.1_windows'],
                    'cuda_lib_fmt': '{0}64_92.dll',
                    'nvtoolsext_fmt': '{0}64_1.dll',
                    'nvvm_lib_fmt': '{0}64_32_0.dll',
@@ -331,7 +331,7 @@ cu_92['windows'] = {'blob': 'cuda_9.2.148_windows',
                    }
 
 cu_92['osx'] = {'blob': 'cuda_9.2.148_mac',
-               'patches': [],
+               'patches': ['cuda_9.2.148.1_mac'],
                'cuda_lib_fmt': 'lib{0}.9.2.dylib',
                'nvtoolsext_fmt': 'lib{0}.1.dylib',
                'nvvm_lib_fmt': 'lib{0}.3.2.0.dylib',
