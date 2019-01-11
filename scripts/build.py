@@ -350,6 +350,7 @@ cu_10['md5_url'] = "https://developer.download.nvidia.com/compute/cuda/10.0/Prod
 cu_10['cuda_libraries'] = [
     'cudart',
     'cufft',
+    'cufftw',
     'cublas',
     'cusparse',
     'cusolver',
@@ -366,6 +367,8 @@ cu_10['cuda_libraries'] = [
     'nppisu',
     'nppitc',
     'npps',
+    'nvblas',
+    'nvgraph',
     'nvrtc',
     'nvrtc-builtins',
     'nvToolsExt',
